@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "MabrookTrack"
-  s.version      = "0.1.0"
+  s.version      = "0.1.1"
   s.summary      = "MabrookTrack iOS SDK — install attribution and in-app events for TikTok app campaigns."
   s.homepage     = "https://mabrooktrack.com/#mmp"
   s.license      = { :type => "Commercial", :text => "See https://mabrooktrack.com/terms" }

@@ -2,13 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- The SDK does not track on its own: the IDFA is sent only after the host
-       app obtains App Tracking Transparency permission, so the host app's own
-       manifest declares tracking. Listing our endpoint as a tracking domain
-       here would make iOS block ALL requests (installs, purchases without any
-       device id) until ATT is granted. -->
+  <!-- Tracking (ATT) happens only through t.mmp.mabrooktrack.com: the SDK sends
+       the IDFA to that host exclusively, and only after the user allowed
+       tracking. iOS blocks the host until then; installs and events without
+       a device id use mmp.mabrooktrack.com, which is not a tracking domain. -->
   <key>NSPrivacyTracking</key>
-  <false/>
+  <true/>
+  <key>NSPrivacyTrackingDomains</key>
+  <array>
+    <string>t.mmp.mabrooktrack.com</string>
+  </array>
   <key>NSPrivacyCollectedDataTypes</key>
   <array>
     <dict>

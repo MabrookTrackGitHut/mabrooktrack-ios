@@ -29,6 +29,10 @@ public struct MabrookConfig {
     public var debug: Bool = false
     /// Override the ingest origin (tests only).
     public var endpoint: String = "https://mmp.mabrooktrack.com"
+    /// Host for requests that carry the IDFA. Declared as a tracking domain in
+    /// the SDK privacy manifest, so iOS blocks it until ATT is granted — by
+    /// then it is the only host that ever sees the IDFA.
+    public var trackingEndpoint: String = "https://t.mmp.mabrooktrack.com"
 
     public init(appKey: String, locale: String? = nil, consent: MabrookConsent? = nil, debug: Bool = false) {
         self.appKey = appKey
@@ -289,7 +293,7 @@ public final class MabrookTrack {
         guard consent != .denied else { log("consent denied — dropped \(body["event_type"] ?? "")"); completion?(false); return }
         var payload = baseFields()
         for (k, v) in body { payload[k] = v }
-        post(path: "/app/\(cfg.appKey)", body: payload) { [weak self] data in
+        post(path: "/app/\(cfg.appKey)", body: payload, tracking: payload["idfa"] != nil) { [weak self] data in
             let ok = data != nil
             self?.log("sent \(body["event_type"] ?? "") \(ok ? "ok" : "failed")")
             completion?(ok)
@@ -297,8 +301,9 @@ public final class MabrookTrack {
     }
 
     /// POST JSON with up to 5 attempts and exponential backoff on 5xx / network errors.
-    private func post(path: String, body: [String: Any], attempt: Int = 0, completion: @escaping (Data?) -> Void) {
-        guard let cfg = config, let url = URL(string: cfg.endpoint.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path),
+    private func post(path: String, body: [String: Any], tracking: Bool = false, attempt: Int = 0, completion: @escaping (Data?) -> Void) {
+        let origin = (tracking ? config?.trackingEndpoint : config?.endpoint) ?? ""
+        guard let cfg = config, let url = URL(string: origin.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path),
               let data = try? JSONSerialization.data(withJSONObject: body)
         else { completion(nil); return }
         var req = URLRequest(url: url)
@@ -311,7 +316,7 @@ public final class MabrookTrack {
             if (400..<500).contains(status) { completion(nil); return } // client error: don't retry
             if attempt < 4 {
                 let delay = min(30.0, 0.5 * pow(2.0, Double(attempt)))
-                self?.queue.asyncAfter(deadline: .now() + delay) { self?.post(path: path, body: body, attempt: attempt + 1, completion: completion) }
+                self?.queue.asyncAfter(deadline: .now() + delay) { self?.post(path: path, body: body, tracking: tracking, attempt: attempt + 1, completion: completion) }
             } else {
                 completion(nil)
             }
